@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Query, Post } from '@nestjs/common';
 import { ComplaintsService } from './complaints.service';
 import { CreateComplaintDto } from './dto/create-complaint.dto';
 
@@ -11,11 +11,15 @@ export class ComplaintsController {
     return this.complaints.create(dto);
   }
 
-  // complaintNumber contains slashes (MG/2026/0001), so it is passed as
-  // a query-style path segment with the slashes URL-encoded by the client
-  // (MG%2F2026%2F0001), which Express decodes back to the real value here.
-  @Get(':complaintNumber')
-  findOne(@Param('complaintNumber') complaintNumber: string) {
+  // GET /complaints?complaintNumber=MG%2F2026%2F0007
+  //
+  // Same fix as case-events: complaint numbers contain slashes
+  // (MG/2026/0007), which breaks URL path routing unless every client
+  // remembers to URL-encode them correctly. A query parameter sidesteps
+  // the gotcha entirely rather than relying on untested path-decoding
+  // behaviour.
+  @Get()
+  findOne(@Query('complaintNumber') complaintNumber: string) {
     return this.complaints.findOne(complaintNumber);
   }
 }

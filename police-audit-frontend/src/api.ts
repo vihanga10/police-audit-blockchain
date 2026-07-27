@@ -1,4 +1,4 @@
-import type { ComplaintPayload } from './types';
+import type { ComplaintPayload, CaseEventPayload, CaseHistory } from './types';
 
 const API_BASE = 'http://localhost:3000';
 
@@ -41,4 +41,40 @@ export async function geocode(address: string): Promise<{ lat: number; lng: numb
     // network/geocoder failure — the map falls back to the station default
   }
   return null;
+}
+
+// ── case thread ──────────────────────────────────────────────
+
+/**
+ * Pulls the full consolidated case — complaint, version trail, statements,
+ * and every event — from queryCaseHistory via the backend. One call, one
+ * key, everything threaded to it. This IS Principle 3 (consolidation)
+ * rendered as a UI.
+ */
+export async function fetchCaseHistory(complaintNumber: string): Promise<CaseHistory> {
+  const res = await fetch(
+    `${API_BASE}/complaints?complaintNumber=${encodeURIComponent(complaintNumber)}`,
+  );
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Complaint ${complaintNumber} not found`);
+  }
+  return res.json() as Promise<CaseHistory>;
+}
+
+export async function submitCaseEvent(payload: CaseEventPayload) {
+  const res = await fetch(`${API_BASE}/case-events`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.message ?? `Request failed with status ${res.status}`);
+  }
+  return res.json() as Promise<{
+    eventId: string;
+    complaintNumber: string;
+    offChainRecordHash: string;
+  }>;
 }
