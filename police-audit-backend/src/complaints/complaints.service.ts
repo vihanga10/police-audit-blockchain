@@ -27,7 +27,14 @@ import { CreateComplaintDto } from './dto/create-complaint.dto';
 // form's own flag. Mirrors the rule described for the UI: auto-set, never
 // auto-unset. ct10/11/14 = rape & unnatural offences, ct20/21 = child
 // cruelty & exploitation, ct22 = trafficking.
-const VULNERABLE_CRIME_TYPES = new Set(['ct10', 'ct11', 'ct14', 'ct20', 'ct21', 'ct22']);
+const VULNERABLE_CRIME_TYPES = new Set([
+  'ct10',
+  'ct11',
+  'ct14',
+  'ct20',
+  'ct21',
+  'ct22',
+]);
 
 @Injectable()
 export class ComplaintsService {
@@ -44,13 +51,18 @@ export class ComplaintsService {
     }
 
     const year = new Date().getFullYear();
-    const complaintNumber = await this.db.nextComplaintNumber(dto.stationCode, year);
+    const complaintNumber = await this.db.nextComplaintNumber(
+      dto.stationCode,
+      year,
+    );
 
     const isAgeVulnerable = dto.victim.dateOfBirth
       ? this.isMinor(dto.victim.dateOfBirth)
       : false;
     const vulnerableVictim =
-      dto.vulnerableVictim || VULNERABLE_CRIME_TYPES.has(dto.crimeType) || isAgeVulnerable;
+      dto.vulnerableVictim ||
+      VULNERABLE_CRIME_TYPES.has(dto.crimeType) ||
+      isAgeVulnerable;
 
     const crimeHour = Number(dto.crimeTime.split(':')[0]);
     const now = new Date();
@@ -137,7 +149,8 @@ export class ComplaintsService {
     });
 
     // 4 — hash the REAL off-chain row (not a placeholder) and seal
-    const offChainRecordHash = await this.db.hashComplaintRecord(complaintNumber);
+    const offChainRecordHash =
+      await this.db.hashComplaintRecord(complaintNumber);
 
     await this.fabric.submitTransaction(
       'recordComplaint',
@@ -163,8 +176,11 @@ export class ComplaintsService {
   }
 
   async findOne(complaintNumber: string) {
-    const raw = await this.fabric.evaluateTransaction('queryCaseHistory', complaintNumber);
-    return JSON.parse(raw);
+    const raw = await this.fabric.evaluateTransaction(
+      'queryCaseHistory',
+      complaintNumber,
+    );
+    return JSON.parse(raw) as Record<string, unknown>;
   }
 
   private isMinor(dateOfBirth: string): boolean {

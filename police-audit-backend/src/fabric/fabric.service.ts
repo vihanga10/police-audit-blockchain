@@ -17,21 +17,37 @@
  * true multi-officer system.
  */
 
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import * as grpc from '@grpc/grpc-js';
-import { connect, Gateway, Identity, Signer, signers } from '@hyperledger/fabric-gateway';
+import {
+  connect,
+  Gateway,
+  Identity,
+  Signer,
+  signers,
+} from '@hyperledger/fabric-gateway';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as crypto from 'crypto';
 
 // Paths into the test-network's generated crypto material.
 // Overridable via env vars once this moves beyond the local test network.
-const TEST_NETWORK = process.env.FABRIC_TEST_NETWORK_PATH
-  ?? path.join(process.env.HOME ?? '', 'Desktop/Research/fabric-samples/test-network');
+const TEST_NETWORK =
+  process.env.FABRIC_TEST_NETWORK_PATH ??
+  path.join(
+    process.env.HOME ?? '',
+    'Desktop/Research/fabric-samples/test-network',
+  );
 
 const MSP_ID = process.env.FABRIC_MSP_ID ?? 'Org1MSP';
 const PEER_ENDPOINT = process.env.FABRIC_PEER_ENDPOINT ?? 'localhost:7051';
-const PEER_HOST_ALIAS = process.env.FABRIC_PEER_HOST_ALIAS ?? 'peer0.org1.example.com';
+const PEER_HOST_ALIAS =
+  process.env.FABRIC_PEER_HOST_ALIAS ?? 'peer0.org1.example.com';
 const CHANNEL_NAME = process.env.FABRIC_CHANNEL ?? 'mychannel';
 const CHAINCODE_NAME = process.env.FABRIC_CHAINCODE ?? 'gcib';
 
@@ -70,7 +86,9 @@ export class FabricService implements OnModuleInit, OnModuleDestroy {
       commitStatusOptions: () => ({ deadline: Date.now() + 60000 }),
     });
 
-    this.logger.log(`Connected to Fabric Gateway as officer36355 on channel '${CHANNEL_NAME}'`);
+    this.logger.log(
+      `Connected to Fabric Gateway as officer36355 on channel '${CHANNEL_NAME}'`,
+    );
   }
 
   onModuleDestroy() {

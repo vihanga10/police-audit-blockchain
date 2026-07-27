@@ -46,8 +46,11 @@ export class DatabaseService implements OnModuleDestroy {
    *     PRIMARY KEY (station_code, year)
    *   );
    */
-  async nextComplaintNumber(stationCode: string, year: number): Promise<string> {
-    const res = await this.pool.query(
+  async nextComplaintNumber(
+    stationCode: string,
+    year: number,
+  ): Promise<string> {
+    const res = await this.pool.query<{ last_seq: number }>(
       `INSERT INTO complaint_counters (station_code, year, last_seq)
        VALUES ($1, $2, 1)
        ON CONFLICT (station_code, year)
@@ -55,7 +58,7 @@ export class DatabaseService implements OnModuleDestroy {
        RETURNING last_seq`,
       [stationCode, year],
     );
-    const seq = res.rows[0].last_seq as number;
+    const seq = res.rows[0].last_seq;
     return `${stationCode}/${year}/${seq.toString().padStart(4, '0')}`;
   }
 
@@ -87,10 +90,22 @@ export class DatabaseService implements OnModuleDestroy {
         entry_date, entry_time, recording_officer_id
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`,
       [
-        c.complaintNumber, c.stationCode, c.crimeType, c.category, c.isMajorCrime,
-        c.complaintTitle ?? null, c.crimeDate, c.crimeTime, c.crimeHour, c.crimeLocation ?? null,
-        c.crimeLatitude ?? null, c.crimeLongitude ?? null, c.locationConfirmedByOfficer,
-        c.entryDate, c.entryTime, c.recordingOfficerId,
+        c.complaintNumber,
+        c.stationCode,
+        c.crimeType,
+        c.category,
+        c.isMajorCrime,
+        c.complaintTitle ?? null,
+        c.crimeDate,
+        c.crimeTime,
+        c.crimeHour,
+        c.crimeLocation ?? null,
+        c.crimeLatitude ?? null,
+        c.crimeLongitude ?? null,
+        c.locationConfirmedByOfficer,
+        c.entryDate,
+        c.entryTime,
+        c.recordingOfficerId,
       ],
     );
   }
@@ -104,7 +119,7 @@ export class DatabaseService implements OnModuleDestroy {
    * table definition, so this is safe to hash directly.
    */
   async hashComplaintRecord(complaintNumber: string): Promise<string> {
-    const res = await this.pool.query(
+    const res = await this.pool.query<{ doc: object }>(
       `SELECT row_to_json(complaints) AS doc
        FROM complaints WHERE complaint_number = $1`,
       [complaintNumber],
@@ -137,9 +152,17 @@ export class DatabaseService implements OnModuleDestroy {
         gender, address, contact_number, relationship_to_victim, is_vulnerable
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
-        p.personId, p.complaintNumber, p.role, p.fullName ?? null, p.nicNo ?? null,
-        p.dateOfBirth ?? null, p.gender ?? null, p.address ?? null,
-        p.contactNumber ?? null, p.relationshipToVictim ?? null, p.isVulnerable,
+        p.personId,
+        p.complaintNumber,
+        p.role,
+        p.fullName ?? null,
+        p.nicNo ?? null,
+        p.dateOfBirth ?? null,
+        p.gender ?? null,
+        p.address ?? null,
+        p.contactNumber ?? null,
+        p.relationshipToVictim ?? null,
+        p.isVulnerable,
       ],
     );
   }
@@ -166,19 +189,82 @@ export class DatabaseService implements OnModuleDestroy {
         capture_timestamp, capturing_officer_id
       ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
       [
-        s.statementId, s.complaintNumber, s.personId, s.statementRole,
-        s.statementText ?? null, s.audioHash ?? null, s.audioCid ?? null,
-        s.noAudioReason ?? null, s.readBackConfirmed, s.captureTimestamp,
+        s.statementId,
+        s.complaintNumber,
+        s.personId,
+        s.statementRole,
+        s.statementText ?? null,
+        s.audioHash ?? null,
+        s.audioCid ?? null,
+        s.noAudioReason ?? null,
+        s.readBackConfirmed,
+        s.captureTimestamp,
         s.capturingOfficerId,
       ],
     );
   }
 
   /** Links a previously-anchored statement to the complaint that now references it. */
-  async attachStatementToComplaint(statementId: string, complaintNumber: string): Promise<void> {
+  async attachStatementToComplaint(
+    statementId: string,
+    complaintNumber: string,
+  ): Promise<void> {
     await this.pool.query(
       `UPDATE statements SET complaint_number = $1 WHERE statement_id = $2`,
       [complaintNumber, statementId],
     );
+  }
+
+  // ── case events ─────────────────────────────────────────────
+
+  async insertCaseEvent(e: {
+    eventId: string;
+    complaintNumber: string;
+    eventType: string;
+    eventDate: string;
+    eventTime: string;
+    officerIds: string[];
+    purposeOfVisit?: string;
+    weaponSerialsOut: string[];
+    weaponSerialsIn: string[];
+    narrativeText?: string;
+    attachmentCid?: string;
+    recordingOfficerId: string;
+  }): Promise<void> {
+    await this.pool.query(
+      `INSERT INTO case_events (
+        event_id, complaint_number, event_type, event_date, event_time,
+        officer_ids, purpose_of_visit, weapon_serials_out, weapon_serials_in,
+        narrative_text, attachment_cid, recording_officer_id
+      ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+      [
+        e.eventId,
+        e.complaintNumber,
+        e.eventType,
+        e.eventDate,
+        e.eventTime,
+        e.officerIds,
+        e.purposeOfVisit ?? null,
+        e.weaponSerialsOut,
+        e.weaponSerialsIn,
+        e.narrativeText ?? null,
+        e.attachmentCid ?? null,
+        e.recordingOfficerId,
+      ],
+    );
+  }
+
+  /** Same mechanism as hashComplaintRecord — pull the real row, hash it. */
+  async hashCaseEventRecord(eventId: string): Promise<string> {
+    const res = await this.pool.query<{ doc: object }>(
+      `SELECT row_to_json(case_events) AS doc FROM case_events WHERE event_id = $1`,
+      [eventId],
+    );
+    if (res.rows.length === 0) {
+      throw new Error(`No case event ${eventId} found to hash`);
+    }
+    return createHash('sha256')
+      .update(JSON.stringify(res.rows[0].doc))
+      .digest('hex');
   }
 }
