@@ -18,3 +18,16 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Dataset CSVs — generated locally, not committed (large + not needed in repo)
+complaints.csv
+persons.csv
+case_events.csv
+court_records.csv
+order_book.csv
+property_register.csv
+evidence_descriptors.csv
+officers.csv
+weapons_register.csv
+crime_types.csv
+sri_lanka_police_stations_sinhala.csv
