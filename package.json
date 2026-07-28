@@ -1,0 +1,25 @@
+{
+  "name": "research",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vihanga10/police-audit-blockchain.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/vihanga10/police-audit-blockchain/issues"
+  },
+  "homepage": "https://github.com/vihanga10/police-audit-blockchain#readme",
+  "dependencies": {
+    "csv-parse": "^7.0.1",
+    "pg": "^8.22.0"
+  }
+}
